@@ -1,0 +1,5 @@
+"main.obj",
+"adc0809.obj",
+"1602.obj" 
+TO "mkh2" 
+RAMSIZE(256) 

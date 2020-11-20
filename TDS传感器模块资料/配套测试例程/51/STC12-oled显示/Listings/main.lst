@@ -1,0 +1,257 @@
+C51 COMPILER V9.59.0.0   MAIN                                                              06/16/2019 15:06:10 PAGE 1   
+
+
+C51 COMPILER V9.59.0.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: D:\Program Files (x86)\Keil\C51\BIN\C51.EXE User\main.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND
+                    - PRINT(.\Listings\main.lst) TABS(2) OBJECT(.\Objects\main.obj)
+
+line level    source
+
+   1          /********************(C) COPRIGHT 2019 Crownto electronic **************************
+   2           * 文件名  ：main.c
+   3           * 描述    ：        
+   4           * 硬件连接：
+   5           * OLED :CS -> P0.3; RST -> P0.1; DC -> P0.2;SCL -> P2.2;SDIN -> P0.0;
+   6           *         D0~D7 -> P0口
+   7           * TDS传感器模块: VCC -> 5V; GND -> GND; AO -> P1.3;
+   8           * 温度传感器DS18B20：VCC-> 5V;GND -> GND ;T -> P1.5
+   9           * 功能描述：测量TDS值、温度值液晶显示；
+  10                       串口接收测量所得的TDS值（波特率9600）；
+  11           *           可连接上位机显示TDS值；
+  12           * 作者    ：冠拓电子
+  13           * 淘宝    ：https://shop376667309.taobao.com
+  14           * 网址    ：www.crownto.cn
+  15          **********************************************************************************/
+  16          
+  17          #include <STC12C5A60S2.h>
+  18          #include <intrins.h>
+  19          #include "oled.h"
+  20          #include "DS18B20.h"
+  21          #define uchar unsigned char
+  22          #define uint  unsigned int
+  23            
+  24          
+  25          
+  26          #define MAIN_Fosc   11059200L //定义主时钟, 模拟串口和和延时会自动适应。5~35MHZ  22118400L 
+  27          
+  28          
+  29          #define ADC_OFF() ADC_CONTR = 0
+  30          #define ADC_ON    (1 << 7)
+  31          #define ADC_90T   (3 << 5)
+  32          #define ADC_180T  (2 << 5)
+  33          #define ADC_360T  (1 << 5)
+  34          #define ADC_540T  0
+  35          #define ADC_FLAG  (1 << 4)  //软件清0
+  36          #define ADC_START (1 << 3)  //自动清0
+  37          #define ADC_CH0   0
+  38          #define ADC_CH1   1
+  39          #define ADC_CH2   2
+  40          #define ADC_CH3   3
+  41          #define ADC_CH4   4
+  42          #define ADC_CH5   5
+  43          #define ADC_CH6   6
+  44          #define ADC_CH7   7
+  45          
+  46          /**************变量定义***************************/
+  47          float TDS=0.0,TDS_voltage;
+  48          float TDS_value=0.0,voltage_value;
+  49          float temp_data=0.0;
+  50          float compensationCoefficient=1.0;//温度校准系数
+  51          float compensationVolatge;
+  52          float kValue=1.0;
+  53          
+  54          unsigned char disbuff[18]={0}; 
+C51 COMPILER V9.59.0.0   MAIN                                                              06/16/2019 15:06:10 PAGE 2   
+
+  55          void DelayUs(unsigned int time);   //延时子函数
+  56          void Delay1(unsigned int time);    //延时主程序
+  57          void  delay_ms_AD(unsigned char ms);
+  58          
+  59          uint  adc10_start(uchar channel); //channel = 0~7
+  60          uint i;
+  61          
+  62          void delay_1s()   //延时1s
+  63          {
+  64   1        unsigned char i, j, k;
+  65   1      
+  66   1        _nop_();
+  67   1        i = 8;
+  68   1        j = 1;
+  69   1        k = 243;
+  70   1        do
+  71   1        {
+  72   2          do
+  73   2          {
+  74   3            while (--k);
+  75   3          } while (--j);
+  76   2        } while (--i);
+  77   1      }
+  78          /*
+  79           * 函数名：Get_Voltage_Value
+  80           * 描述  ：获取ADC0809的转换电压值
+  81           *         
+  82           * 输入  ：无
+  83           * 输出  ：无
+  84           * 说明  ：
+  85           *            AIN0(0X40):热敏电阻
+  86           *            AIN1(0X41):悬空
+  87           *            AIN2(0X42):滑动变阻器
+  88           *            AIN3(0X43):光敏电阻
+  89           */
+  90          void TDS_Value_Conversion()
+  91          {
+  92   1        TDS_voltage=(TDS*5.0)/1024;
+  93   1        compensationCoefficient=1.0+0.02*((temp_data/10)-25.0); 
+  94   1        compensationVolatge=TDS_voltage/compensationCoefficient;
+  95   1        TDS_value=(133.42*compensationVolatge*compensationVolatge*compensationVolatge - 
+  96   1        255.86*compensationVolatge*compensationVolatge + 857.39*compensationVolatge)*0.5*kValue;
+  97   1        
+  98   1          if((TDS_value<=0)){TDS_value=0;}
+  99   1          if((TDS_value>1400)){TDS_value=1400;}
+ 100   1          
+ 101   1          /*显示TDS*/
+ 102   1          disbuff[0]=(int)(TDS_value)/1000+'0';
+ 103   1          disbuff[1]=(int)(TDS_value)%1000/100+'0'; 
+ 104   1          disbuff[2]=(int)(TDS_value)%100/10+'0';
+ 105   1          disbuff[3]=(int)(TDS_value)%10+'0';
+ 106   1          OLED_ShowChar(36,2,disbuff[0]);//显示ASCII字符
+ 107   1          OLED_ShowChar(45,2,disbuff[1]);//显示ASCII字符
+ 108   1          OLED_ShowChar(54,2,disbuff[2]);//显示ASCII字符
+ 109   1          OLED_ShowChar(63,2,disbuff[3]);//显示ASCII字符  
+ 110   1      }
+ 111          
+ 112          void TEMP_Value_Conversion()
+ 113          {
+ 114   1          disbuff[4]=(int)(temp_data)/1000+'0';
+ 115   1          disbuff[5]=(int)(temp_data)%1000/100+'0'; 
+ 116   1          disbuff[6]=(int)(temp_data)%100/10+'0';
+C51 COMPILER V9.59.0.0   MAIN                                                              06/16/2019 15:06:10 PAGE 3   
+
+ 117   1          disbuff[7]='.';
+ 118   1          disbuff[8]=(int)(temp_data)%10+'0';
+ 119   1      
+ 120   1      
+ 121   1          OLED_ShowChar(24,4,disbuff[4]);//显示ASCII字符
+ 122   1          OLED_ShowChar(33,4,disbuff[5]);//显示ASCII字符
+ 123   1          OLED_ShowChar(42,4,disbuff[6]);//显示ASCII字符
+ 124   1          OLED_ShowChar(51,4,disbuff[7]);//显示ASCII字符  
+ 125   1          OLED_ShowChar(60,4,disbuff[8]);//显示ASCII字符  
+ 126   1      
+ 127   1      }
+ 128          void StartUART( void )
+ 129          {               //波特率9600
+ 130   1           SCON = 0x50;
+ 131   1           TMOD = 0x20;
+ 132   1           TH1 = 0xFD;
+ 133   1           TL1 = 0xFD; 
+ 134   1           PCON = 0x00;
+ 135   1           TR1 = 1;
+ 136   1      }
+ 137          //**********通过串口将接收到数据发送给PC端**************
+ 138          void R_S_Byte(uchar R_Byte)
+ 139          { 
+ 140   1         SBUF = R_Byte;  
+ 141   1           while( TI == 0 );        //查询法
+ 142   1           TI = 0;    
+ 143   1      }
+ 144          /*
+ 145           * 函数名：main
+ 146           * 描述  ：主函数
+ 147           * 输入  ：无
+ 148           * 输出  ：无
+ 149           */
+ 150          void main(void)
+ 151          { 
+ 152   1        StartUART();
+ 153   1        Init_Ds18b20();
+ 154   1        OLED_Init();      //初始化OLED  
+ 155   1        OLED_Clear()    ; 
+ 156   1      
+ 157   1        P1ASF = 0x0F;     //12C5A60AD/S2系列模拟输入(AD)选择
+ 158   1        ADC_CONTR = ADC_360T | ADC_ON;
+ 159   1        OLED_ShowString(0,0,"T D S ");  
+ 160   1        OLED_ShowCHinese(54,0,3);
+ 161   1        OLED_ShowCHinese(72,0,4);
+ 162   1        OLED_ShowCHinese(90,0,5);
+ 163   1        OLED_ShowCHinese(108,0,6);
+ 164   1        OLED_ShowString(0,2,"TDS:");  
+ 165   1        OLED_ShowString(0,4,"T:");  
+ 166   1        while(1)
+ 167   1        {
+ 168   2            temp_data=Get_temp();
+ 169   2            TDS = adc10_start(3);       
+ 170   2            TDS_Value_Conversion();
+ 171   2            TEMP_Value_Conversion();
+ 172   2          
+ 173   2                for(i=0;i<9;i++)
+ 174   2              {
+ 175   3                R_S_Byte(disbuff[i]);
+ 176   3              } 
+ 177   2              R_S_Byte('\r');//发送回车换行符
+ 178   2              R_S_Byte('\n');
+C51 COMPILER V9.59.0.0   MAIN                                                              06/16/2019 15:06:10 PAGE 4   
+
+ 179   2              delay_1s();
+ 180   2        }
+ 181   1      }
+ 182            
+ 183          
+ 184          ///********************* 做一次ADC转换 *******************/
+ 185          uint  adc10_start(uchar channel)  //channel = 0~7
+ 186          {
+ 187   1        uint  adc;
+ 188   1        uchar i;
+ 189   1      
+ 190   1        ADC_RES = 0;
+ 191   1        ADC_RESL = 0;
+ 192   1      
+ 193   1        ADC_CONTR = (ADC_CONTR & 0xe0) | ADC_START | channel; 
+ 194   1      
+ 195   1        i = 250;
+ 196   1        do{
+ 197   2          if(ADC_CONTR & ADC_FLAG)
+ 198   2          {
+ 199   3            ADC_CONTR &= ~ADC_FLAG;
+ 200   3            adc = (uint)ADC_RES;
+ 201   3            adc = (adc << 2) | (ADC_RESL & 3);
+ 202   3            return  adc;
+ 203   3          }
+ 204   2        }while(--i);
+ 205   1        return  1024;
+ 206   1      }
+ 207          
+ 208          //========================================================================
+ 209          // 函数: void  delay_ms(unsigned char ms)
+ 210          // 描述: 延时函数。
+ 211          // 参数: ms,要延时的ms数.
+ 212          // 返回: none.
+ 213          // 版本: VER1.0
+ 214          // 日期: 2010-12-15
+ 215          // 备注: 
+ 216          //========================================================================
+ 217          void  delay_ms_AD(unsigned char ms)
+ 218          {
+ 219   1           unsigned int i;
+ 220   1         do{
+ 221   2              i = MAIN_Fosc / 14000;
+ 222   2            while(--i)  ;   //14T per loop
+ 223   2           }while(--ms);
+ 224   1      }
+ 225          
+ 226          
+ 227          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    942    ----
+   CONSTANT SIZE    =     15    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     52    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

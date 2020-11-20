@@ -1,0 +1,157 @@
+C51 COMPILER V9.59.0.0   1602                                                              06/02/2019 15:10:11 PAGE 1   
+
+
+C51 COMPILER V9.59.0.0, COMPILATION OF MODULE 1602
+OBJECT MODULE PLACED IN 1602.OBJ
+COMPILER INVOKED BY: D:\Program Files (x86)\Keil\C51\BIN\C51.EXE 1602.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND TABS
+                    -(2)
+
+line level    source
+
+   1          #include "1602.h"
+   2          
+   3          void Delay(unsigned int time)
+   4          {
+   5   1          unsigned int timeCounter = 0;
+   6   1        for (timeCounter = time;timeCounter > 0 ;timeCounter --)
+   7   1          DelayUs(255);
+   8   1      }
+   9          
+  10          void DelayUs(unsigned int time)
+  11          {
+  12   1        unsigned int timeCounter = 0;
+  13   1        for (timeCounter = 0;timeCounter < time;timeCounter ++)
+  14   1          _nop_();
+  15   1      }
+  16          
+  17          /*---------------------------------  LCD初始化函数--------------------------------------*/
+  18          
+  19          void LCDInit(void)
+  20          {
+  21   1          //三次显示模式设置
+  22   1        LCD_Data=0;
+  23   1        LCD_E=Disable;
+  24   1        Delay(5);
+  25   1        WriteCmd(LCD_Init);
+  26   1        Delay(5);
+  27   1        WriteCmd(LCD_Init);
+  28   1        Delay(5);
+  29   1        WriteCmd(LCD_Init);
+  30   1      
+  31   1        WriteCmd(LCD_Init);               //初始化
+  32   1        WriteCmd(LCD_CloseCtr);             //关显示
+  33   1        WriteCmd(LCD_CLS);                //清屏幕
+  34   1        WriteCmd(LCD_EnterSet);             //光标移动设置
+  35   1        WriteCmd(LCD_DispCtr);              //显示开以及光标设置
+  36   1        
+  37   1      }
+  38          
+  39          /*---------------------------------  LCD模式设置函数--------------------------------------*\
+  40            
+  41            SetWriteCmd()         设置LCD为写命令模式
+  42            SetReadCmd()              设置LCD为读命令模式
+  43            SetWriteData()        设置LCD为写数据模式
+  44            
+  45          \*----------------------------------------------------------------------------------------*/
+  46          void SetWriteCmd(void)
+  47          {
+  48   1        LCD_RW=Write;
+  49   1        LCD_RS=Cmd;
+  50   1      }
+  51          
+  52          void SetReadCmd(void)
+  53          {
+  54   1        LCD_RW=Read;
+C51 COMPILER V9.59.0.0   1602                                                              06/02/2019 15:10:11 PAGE 2   
+
+  55   1        LCD_RS=Cmd;
+  56   1      }
+  57          
+  58          void SetWriteData(void)
+  59          {
+  60   1        LCD_RW=Write;
+  61   1        LCD_RS=Data;
+  62   1      }
+  63          
+  64          /*---------------------------------  LCD功能执行函数--------------------------------------*\
+  65            
+  66            WriteCmd()          写命令
+  67            WriteData()         写数据
+  68            ExecuteCmd()          执行命令
+  69            SetXY()           显示定位
+  70            DisplaySingleChar()     显示单个字符
+  71            DisplayString()       显示一串字符
+  72            IsBusy()            忙标志检测
+  73          \*----------------------------------------------------------------------------------------*/
+  74          void WriteCmd(char cmd)
+  75          {
+  76   1        while(IsBusy());
+  77   1        LCD_Data=cmd; 
+  78   1        SetWriteCmd();
+  79   1        ExecuteCmd();
+  80   1      }
+  81          
+  82          void WriteData(char ddata)
+  83          {
+  84   1        while(IsBusy());
+  85   1        LCD_Data=ddata;
+  86   1        SetWriteData(); 
+  87   1        ExecuteCmd();
+  88   1      }
+  89          
+  90          void ExecuteCmd(void)
+  91          {
+  92   1        LCD_E=Enable;
+  93   1        LCD_E=Disable;
+  94   1      }
+  95          
+  96          void SetXY(char x,char y)
+  97          {
+  98   1        if (y)
+  99   1          x|=0x40;
+ 100   1        x|=0x80;
+ 101   1        Delay(5);
+ 102   1        WriteCmd(x);
+ 103   1      
+ 104   1      }
+ 105          
+ 106          void DisplaySingleChar(char x,char y,char cchar)
+ 107          {
+ 108   1        Delay(5);
+ 109   1        SetXY(x,y);
+ 110   1        WriteData(cchar); 
+ 111   1      }
+ 112          
+ 113          void DisplayString(char x,char y,char *str)
+ 114          {
+ 115   1        while(*str)
+ 116   1        {
+C51 COMPILER V9.59.0.0   1602                                                              06/02/2019 15:10:11 PAGE 3   
+
+ 117   2          Delay(5);
+ 118   2          DisplaySingleChar(x++,y,*str);
+ 119   2          str++;
+ 120   2        }
+ 121   1      }
+ 122          
+ 123          bit IsBusy(void)
+ 124          {
+ 125   1        LCD_Data=0xFF;
+ 126   1        SetReadCmd();
+ 127   1        ExecuteCmd();
+ 128   1        return (bit)(LCD_Data & 0x80);  
+ 129   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    280    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----      13
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

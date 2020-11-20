@@ -1,0 +1,1 @@
+"user\Lcd1602.c" OPTIMIZE (8,SPEED) BROWSE INCDIR(.\user) DEBUG OBJECTEXTEND PRINT(.\Listings\Lcd1602.lst) TABS (2) OBJECT(.\Objects\Lcd1602.obj)

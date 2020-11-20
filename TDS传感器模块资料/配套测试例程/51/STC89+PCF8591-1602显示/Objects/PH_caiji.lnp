@@ -1,0 +1,7 @@
+".\Objects\STARTUP.obj",
+".\Objects\Lcd1602.obj",
+".\Objects\PCF8591.obj",
+".\Objects\PH_caiji.obj",
+".\Objects\I2C.obj" 
+TO ".\Objects\PH_caiji" 
+PRINT(".\Listings\PH_caiji.m51") RAMSIZE(256) 

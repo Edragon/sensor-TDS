@@ -1,0 +1,6 @@
+ * 硬件连接：
+ * ADC0809:OE -> P1.0; EOC -> P1.1; ST -> P1.2;CLK -> P1.3; A -> P1.4; B -> P1.5; C->P1.6;
+ *         OUT1~OUT8 -> P3口
+ * LCD1602:RS -> P0.0; RW -> P0.1; E -> P0.2;
+ *         D0~D7 -> P2口
+ * PH模块: VCC -> 5V; GND -> GND; PO -> IN3;

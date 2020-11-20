@@ -1,0 +1,302 @@
+C51 COMPILER V9.59.0.0   LCD1602                                                           06/16/2019 15:34:23 PAGE 1   
+
+
+C51 COMPILER V9.59.0.0, COMPILATION OF MODULE LCD1602
+OBJECT MODULE PLACED IN .\Objects\Lcd1602.obj
+COMPILER INVOKED BY: D:\Program Files (x86)\Keil\C51\BIN\C51.EXE user\Lcd1602.c OPTIMIZE(8,SPEED) BROWSE INCDIR(.\user) 
+                    -DEBUG OBJECTEXTEND PRINT(.\Listings\Lcd1602.lst) TABS(2) OBJECT(.\Objects\Lcd1602.obj)
+
+line level    source
+
+   1          /******************** (C) COPYRIGHT 2015 Silicone shell electronic studio **************************
+   2           * 文件名  ：Lcd1602.c
+   3           * 描述    : 1602液晶显示屏库函数        
+   4           * 硬件连接： EN:P2.5
+   5           *            RW:P2.6
+   6           *            RS:P2.7
+   7           *            D0~D7:P0口
+   8           *
+   9           * 实验平台：SHELL1.0开发板
+  10           *
+  11           * 作者    ：Silicone shell electronic studio
+  12           * 淘宝    ：http://shop111698447.taobao.com/shop/view_shop.htm?spm=a1z0e.1.10010.5.GCUiZL
+  13          **********************************************************************************/
+  14          #include "lcd.h"
+  15          #include <intrins.h>
+  16          #include <reg52.h>
+  17          
+  18          /*********************LCD1602端口定义***************************/
+  19          sbit LCD_E        =P2^2;          //执行使能端
+  20          sbit LCD_RW       =P2^1;          //读写控制端
+  21          sbit LCD_RS       =P2^0;          //数据命令选择端
+  22          
+  23          /*
+  24           * 函数名：delay_1s
+  25           * 描述  ：延时函数1s
+  26           *         
+  27           * 输入  ：unsigned int time：延时量
+  28           * 输出  ：无
+  29           * 说明  ：液晶显示用延时函数
+  30           */
+  31          void delay_1s()   //延时1s
+  32          {
+  33   1        unsigned char i, j, k;
+  34   1      
+  35   1        _nop_();
+  36   1        i = 8;
+  37   1        j = 1;
+  38   1        k = 243;
+  39   1        do
+  40   1        {
+  41   2          do
+  42   2          {
+  43   3            while (--k);
+  44   3          } while (--j);
+  45   2        } while (--i);
+  46   1      }   
+  47          /*
+  48           * 函数名：Delay
+  49           * 描述  ：延时函数
+  50           *         
+  51           * 输入  ：unsigned int time：延时量
+  52           * 输出  ：无
+  53           * 说明  ：
+  54           */
+C51 COMPILER V9.59.0.0   LCD1602                                                           06/16/2019 15:34:23 PAGE 2   
+
+  55          void Delay(unsigned int time)
+  56          {
+  57   1          unsigned int timeCounter = 0;
+  58   1        for (timeCounter = time;timeCounter > 0 ;timeCounter --)
+  59   1          DelayUs(255);
+  60   1      }
+  61          /*
+  62           * 函数名：DelayUs
+  63           * 描述  ：延时函数（微秒）
+  64           *         
+  65           * 输入  ：unsigned int time：延时量
+  66           * 输出  ：无
+  67           * 说明  ：
+  68           */
+  69          void DelayUs(unsigned int time)
+  70          {
+  71   1        unsigned int timeCounter = 0;
+  72   1        for (timeCounter = 0;timeCounter < time;timeCounter ++)
+  73   1          _nop_();
+  74   1      }
+  75          
+  76          /****************************************************************************************\
+  77          **                   LCD驱动模块                **
+  78          \****************************************************************************************/
+  79          
+  80          /*
+  81           * 函数名：LCDInit
+  82           * 描述  ：液晶初始化函数
+  83           *         
+  84           * 输入  ：无
+  85           * 输出  ：无
+  86           * 说明  ：
+  87           */
+  88          void LCDInit(void)
+  89          {
+  90   1          //三次显示模式设置
+  91   1        LCD_Data=0;
+  92   1        LCD_E=Disable;
+  93   1        Delay(5);
+  94   1        WriteCmd(LCD_Init);
+  95   1        Delay(5);
+  96   1        WriteCmd(LCD_Init);
+  97   1        Delay(5);
+  98   1        WriteCmd(LCD_Init);
+  99   1      
+ 100   1        WriteCmd(LCD_Init);               //初始化
+ 101   1        WriteCmd(LCD_CloseCtr);             //关显示
+ 102   1        WriteCmd(LCD_CLS);                //清屏幕
+ 103   1        WriteCmd(LCD_EnterSet);             //光标移动设置
+ 104   1        WriteCmd(LCD_DispCtr);              //显示开以及光标设置
+ 105   1        
+ 106   1      }
+ 107          
+ 108          /*---------------------------------  LCD模式设置函数--------------------------------------*\
+ 109            
+ 110            SetWriteCmd()         设置LCD为写命令模式
+ 111            SetReadCmd()              设置LCD为读命令模式
+ 112            SetWriteData()        设置LCD为写数据模式
+ 113            
+ 114          \*----------------------------------------------------------------------------------------*/
+ 115          /*
+ 116           * 函数名：SetWriteCmd
+C51 COMPILER V9.59.0.0   LCD1602                                                           06/16/2019 15:34:23 PAGE 3   
+
+ 117           * 描述  ：设置LCD为写命令模式
+ 118           *         
+ 119           * 输入  ：无
+ 120           * 输出  ：无
+ 121           * 说明  ：
+ 122           */
+ 123          void SetWriteCmd(void)
+ 124          {
+ 125   1        LCD_RW=Write;
+ 126   1        LCD_RS=Cmd;
+ 127   1      }
+ 128          /*
+ 129           * 函数名：SetReadCmd
+ 130           * 描述  ：设置LCD为读命令模式
+ 131           *         
+ 132           * 输入  ：无
+ 133           * 输出  ：无
+ 134           * 说明  ：
+ 135           */
+ 136          void SetReadCmd(void)
+ 137          {
+ 138   1        LCD_RW=Read;
+ 139   1        LCD_RS=Cmd;
+ 140   1      }
+ 141          /*
+ 142           * 函数名：SetWriteData
+ 143           * 描述  ：设置LCD为写数据模式
+ 144           *         
+ 145           * 输入  ：无
+ 146           * 输出  ：无
+ 147           * 说明  ：
+ 148           */
+ 149          void SetWriteData(void)
+ 150          {
+ 151   1        LCD_RW=Write;
+ 152   1        LCD_RS=Data;
+ 153   1      }
+ 154          
+ 155          /*---------------------------------  LCD功能执行函数--------------------------------------*\
+ 156            
+ 157            WriteCmd()          写命令
+ 158            WriteData()         写数据
+ 159            ExecuteCmd()          执行命令
+ 160            SetXY()           显示定位
+ 161            DisplaySingleChar()     显示单个字符
+ 162            DisplayString()       显示一串字符
+ 163            IsBusy()            忙标志检测
+ 164          \*----------------------------------------------------------------------------------------*/
+ 165          /*
+ 166           * 函数名：WriteCmd
+ 167           * 描述  ：写命令
+ 168           *         
+ 169           * 输入  ：无
+ 170           * 输出  ：无
+ 171           * 说明  ：
+ 172           */
+ 173          void WriteCmd(char cmd)
+ 174          {
+ 175   1        while(IsBusy());
+ 176   1        LCD_Data=cmd; 
+ 177   1        SetWriteCmd();
+ 178   1        ExecuteCmd();
+C51 COMPILER V9.59.0.0   LCD1602                                                           06/16/2019 15:34:23 PAGE 4   
+
+ 179   1      }
+ 180          /*
+ 181           * 函数名：WriteData
+ 182           * 描述  ：写数据
+ 183           *         
+ 184           * 输入  ：无
+ 185           * 输出  ：无
+ 186           * 说明  ：
+ 187           */
+ 188          void WriteData(char ddata)
+ 189          {
+ 190   1        while(IsBusy());
+ 191   1        LCD_Data=ddata;
+ 192   1        SetWriteData(); 
+ 193   1        ExecuteCmd();
+ 194   1      }
+ 195          /*
+ 196           * 函数名：ExecuteCmd
+ 197           * 描述  ：执行命令
+ 198           *         
+ 199           * 输入  ：无
+ 200           * 输出  ：无
+ 201           * 说明  ：
+ 202           */
+ 203          void ExecuteCmd(void)
+ 204          {
+ 205   1        LCD_E=Enable;
+ 206   1        LCD_E=Disable;
+ 207   1      }
+ 208          /*
+ 209           * 函数名：SetXY
+ 210           * 描述  ：显示定位
+ 211           *         
+ 212           * 输入  ：无
+ 213           * 输出  ：无
+ 214           * 说明  ：
+ 215           */
+ 216          void SetXY(char x,char y)
+ 217          {
+ 218   1        if (y)
+ 219   1        x|=0x40;
+ 220   1        x|=0x80;
+ 221   1        Delay(5);
+ 222   1        WriteCmd(x);
+ 223   1      
+ 224   1      }
+ 225          /*
+ 226           * 函数名：DisplaySingleChar
+ 227           * 描述  ：显示单个字符
+ 228           *         
+ 229           * 输入  ：无
+ 230           * 输出  ：无
+ 231           * 说明  ：
+ 232           */
+ 233          void DisplaySingleChar(char x,char y,char cchar)
+ 234          {
+ 235   1        SetXY(x,y);
+ 236   1        WriteData(cchar); 
+ 237   1      }
+ 238          /*
+ 239           * 函数名：DisplayString
+ 240           * 描述  ：显示字符串
+C51 COMPILER V9.59.0.0   LCD1602                                                           06/16/2019 15:34:23 PAGE 5   
+
+ 241           *         
+ 242           * 输入  ：无
+ 243           * 输出  ：无
+ 244           * 说明  ：
+ 245           */
+ 246          void DisplayString(char x,char y,char *str)
+ 247          {
+ 248   1        while(*str)
+ 249   1        {
+ 250   2          Delay(5);
+ 251   2          DisplaySingleChar(x++,y,*str);
+ 252   2          str++;
+ 253   2        }
+ 254   1      }
+ 255          /*
+ 256           * 函数名：IsBusy
+ 257           * 描述  ：忙标志检测
+ 258           *         
+ 259           * 输入  ：无
+ 260           * 输出  ：无
+ 261           * 说明  ：
+ 262           */
+ 263          bit IsBusy(void)
+ 264          {
+ 265   1        LCD_Data=0xFF;
+ 266   1        SetReadCmd();
+ 267   1        ExecuteCmd();
+ 268   1      //  return (bit)(P0 & 0x80);  
+ 269   1          return (bit)(LCD_Data & 0x80);  
+ 270   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    283    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----      11
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
